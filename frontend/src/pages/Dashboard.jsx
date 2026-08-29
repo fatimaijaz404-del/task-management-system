@@ -7,12 +7,13 @@ function Dashboard() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [priority, setPriority] = useState('medium');
+  const [energyLevel, setEnergyLevel] = useState('low');
+  const [dueDate, setDueDate] = useState('');
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
   const user = JSON.parse(localStorage.getItem('user'));
 
-  // Jab page load ho, tasks fetch karein
   useEffect(() => {
     fetchTasks();
   }, []);
@@ -33,11 +34,19 @@ function Dashboard() {
     if (!title.trim()) return;
 
     try {
-      const res = await API.post('/tasks', { title, description, priority });
+      const res = await API.post('/tasks', {
+        title,
+        description,
+        priority,
+        energyLevel,
+        dueDate: dueDate || null,
+      });
       setTasks([res.data, ...tasks]);
       setTitle('');
       setDescription('');
       setPriority('medium');
+      setEnergyLevel('low');
+      setDueDate('');
     } catch (err) {
       console.error('Error adding task:', err);
     }
@@ -76,7 +85,6 @@ function Dashboard() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
-      {/* Header */}
       <header className="bg-white shadow-sm">
         <div className="max-w-4xl mx-auto px-6 py-4 flex justify-between items-center">
           <div>
@@ -95,7 +103,6 @@ function Dashboard() {
       </header>
 
       <main className="max-w-4xl mx-auto px-6 py-8">
-        {/* Add Task Form */}
         <form
           onSubmit={handleAddTask}
           className="bg-white rounded-2xl shadow-md p-6 mb-8"
@@ -118,7 +125,7 @@ function Dashboard() {
             className="w-full border border-gray-300 rounded-lg p-3 mb-3 focus:outline-none focus:ring-2 focus:ring-purple-400"
             rows="2"
           />
-          <div className="flex gap-3">
+          <div className="flex flex-wrap gap-3">
             <select
               value={priority}
               onChange={(e) => setPriority(e.target.value)}
@@ -128,16 +135,32 @@ function Dashboard() {
               <option value="medium">Medium Priority</option>
               <option value="high">High Priority</option>
             </select>
+
+            <select
+              value={energyLevel}
+              onChange={(e) => setEnergyLevel(e.target.value)}
+              className="border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-purple-400"
+            >
+              <option value="low">🔋 Low Energy</option>
+              <option value="high">⚡ High Energy</option>
+            </select>
+
+            <input
+              type="date"
+              value={dueDate}
+              onChange={(e) => setDueDate(e.target.value)}
+              className="border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-purple-400"
+            />
+
             <button
               type="submit"
-              className="flex-1 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-lg py-2 transition"
+              className="flex-1 min-w-[150px] bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-lg py-2 transition"
             >
               + Add Task
             </button>
           </div>
         </form>
 
-        {/* Task List */}
         {loading ? (
           <p className="text-center text-gray-500">Loading tasks...</p>
         ) : tasks.length === 0 ? (
@@ -175,13 +198,34 @@ function Dashboard() {
                       {task.description}
                     </p>
                   )}
-                  <span
-                    className={`inline-block text-xs px-2 py-1 rounded-full border mt-2 ${
-                      priorityColors[task.priority]
-                    }`}
-                  >
-                    {task.priority}
-                  </span>
+
+                  <div className="flex flex-wrap gap-2 mt-2 items-center">
+                    <span
+                      className={`inline-block text-xs px-2 py-1 rounded-full border ${
+                        priorityColors[task.priority]
+                      }`}
+                    >
+                      {task.priority}
+                    </span>
+
+                    <span className="inline-block text-xs px-2 py-1 rounded-full border bg-blue-50 text-blue-600 border-blue-200">
+                      {task.energyLevel === 'high' ? '⚡ High Energy' : '🔋 Low Energy'}
+                    </span>
+
+                    {task.dueDate && (
+                      <span
+                        className={`inline-block text-xs px-2 py-1 rounded-full border ${
+                          new Date(task.dueDate) < new Date() && task.status !== 'done'
+                            ? 'bg-red-50 text-red-600 border-red-200 animate-pulse'
+                            : (new Date(task.dueDate) - new Date()) / (1000 * 60 * 60 * 24) <= 1
+                            ? 'bg-orange-50 text-orange-600 border-orange-200'
+                            : 'bg-gray-50 text-gray-600 border-gray-200'
+                        }`}
+                      >
+                        📅 {new Date(task.dueDate).toLocaleDateString()}
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <button
                   onClick={() => handleDelete(task._id)}
